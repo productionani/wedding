@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowDown, CalendarDays, MapPin, Sparkles } from 'lucide-react'
+import { ArrowDown, CalendarDays, MapPin, Sparkles, Volume2, VolumeX } from 'lucide-react'
 import { couple, events, venue } from './data'
 import { GaneshIllustration } from './components/GaneshIllustration'
 import { CoupleSlider } from './components/CoupleSlider'
@@ -304,13 +304,85 @@ function Invitation() {
 
 export default function App() {
   const [isOpen, setIsOpen] = useState(false)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+
+  const toggleMusic = () => {
+    if (!audioRef.current) return
+    if (isPlaying) {
+      audioRef.current.pause()
+      setIsPlaying(false)
+    } else {
+      audioRef.current.play().then(() => setIsPlaying(true)).catch(() => {})
+    }
+  }
+
+  const handleOpen = () => {
+    setIsOpen(true)
+    if (audioRef.current) {
+      audioRef.current.play().then(() => {
+        setIsPlaying(true)
+      }).catch((err) => {
+        console.warn('Autoplay prevented by browser:', err)
+      })
+    }
+  }
+
+  useEffect(() => {
+    // Attempt playback on first page mount if allowed
+    const audio = audioRef.current
+    if (audio) {
+      audio.volume = 0.85
+      audio.play().then(() => {
+        setIsPlaying(true)
+      }).catch(() => {
+        // Autoplay requires user interaction on most browsers, handled by onOpen
+      })
+    }
+  }, [])
 
   return (
     <div className="app-shell">
+      {/* Background Wedding Music */}
+      <audio
+        ref={audioRef}
+        src="/gaan.mp3"
+        loop
+        preload="auto"
+        onPlay={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
+      />
+
+      {/* Floating Music Control Button */}
+      <motion.button
+        type="button"
+        className={`music-toggle-btn ${isPlaying ? 'music-toggle-btn--playing' : ''}`}
+        onClick={toggleMusic}
+        aria-label={isPlaying ? 'Pause background music' : 'Play background music'}
+        title={isPlaying ? 'Pause music' : 'Play music'}
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 0.4, duration: 0.5 }}
+        whileHover={{ scale: 1.08 }}
+        whileTap={{ scale: 0.92 }}
+      >
+        <span className="music-toggle-halo" aria-hidden="true" />
+        {isPlaying ? (
+          <div className="music-wave-icon" aria-hidden="true">
+            <span className="bar bar-1" />
+            <span className="bar bar-2" />
+            <span className="bar bar-3" />
+            <Volume2 size={16} />
+          </div>
+        ) : (
+          <VolumeX size={17} />
+        )}
+      </motion.button>
+
       <AnimatePresence mode="wait">
         {isOpen
           ? <Invitation key="invitation" />
-          : <InvitationCover key="cover" onOpen={() => setIsOpen(true)} />}
+          : <InvitationCover key="cover" onOpen={handleOpen} />}
       </AnimatePresence>
     </div>
   )
